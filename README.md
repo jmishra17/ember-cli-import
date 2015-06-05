@@ -1,4 +1,6 @@
-# Ember-import-schema
+# ember-import-schema
+
+An ember addon that lets you generate ember models from an external schema source
 
 An ember-cli addon that lets one export a json schema and all models, their relationships and attirbutes in your app
 
