@@ -2,6 +2,7 @@ var Blueprint  = require('ember-cli/lib/models/blueprint');
 var Promise    = require('ember-cli/lib/ext/promise');
 var merge      = require('ember-cli/node_modules/lodash/object/merge');
 var inflection = require('ember-cli/node_modules/inflection');
+var sailsParser = require('./sails-parser');
 module.exports = {
   description: '',
 
@@ -56,21 +57,81 @@ module.exports = {
   },
 
   _process:function(type, options){
-    var modelOptionsArr = [], blueprintPromisesArr = [];
-    var modelNames = ['user', 'comment', 'post', 'affiliation', 'reunion'];
-    for(var i=0;i<modelNames.length;i++){
-      var modelOption = merge({},options, {
+    console.log('options -->', options);
+    var path; var schemaType;
+    if(!options.entity.name){
+      throw new Error('no pathname mentioned');
+    } 
+    path = options.entity.name;
+    if(!options.entity.options.schema){
+      throw new Error('no schema type provided');
+    }
+    schemaType = options.entity.options.schema;
+    delete options.entity.options.schema;
+
+    var schema;
+    if(schemaType == 'sails'){
+      schema = sailsParser.getSchema(path);
+    }
+    var models;
+    if(!schema.hasOwnProperty('models')){
+      throw new Error('The given directory did not contain any models of the schema type '+ schemaType);
+    }
+    models = schema.models;
+    var blueprintPromisesArr = [];
+
+    for(var i=0;i<models.length;i++){
+      var modelOptions = merge({}, options, {
         entity: {
-          name:inflection.singularize(modelNames[i])
+          name:models[i].name,
+          options:models[i].attrs
         }
       });
-      modelOptionsArr.push(modelOption);
-    }
-
-    for(var i=0;i<modelOptionsArr.length;i++){
-      var blueprintPromise = this._processBlueprint(type, 'model', modelOptionsArr[i]);
+      var blueprintPromise = this._processBlueprint(type, 'model', modelOptions);
       blueprintPromisesArr.push(blueprintPromise);
     }
+
     return Promise.all(blueprintPromisesArr);
+
+
+      // {
+      //   models: [
+      //      {
+      //       name:user 
+      //       attrs:{
+      //           name:'attr;,
+      //           hasMany:'comments'
+      //        }
+      //     },
+      //     {
+      //       name:comment
+      //        attrs: {
+      //          type:'string', 
+      //          creationDate:'date',
+      //          photo:'belongsTo'
+      //       }
+      //     }
+      //   ]
+      // }
+
+
+
+    // var modelOptionsArr = [], blueprintPromisesArr = [];
+    // var modelNames = ['user', 'comment', 'post', 'affiliation', 'reunion'];
+    // for(var i=0;i<modelNames.length;i++){
+    //   var modelOption = merge({},options, {
+    //     entity: {
+    //       name:inflection.singularize(modelNames[i])
+    //     }
+    //   });
+    //   modelOptionsArr.push(modelOption);
+    // }
+
+    // for(var i=0;i<modelOptionsArr.length;i++){
+    //   var blueprintPromise = this._processBlueprint(type, 'model', modelOptionsArr[i]);
+    //   blueprintPromisesArr.push(blueprintPromise);
+    // }
+    // return Promise.all(blueprintPromisesArr);
+    return Promise.resolve();
   }
 };
